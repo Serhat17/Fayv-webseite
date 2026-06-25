@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+/* ===== CSS Custom Properties ===== */
+:root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --surface: #f5f5f5;
+  --surface-hover: #ebebeb;
+  --card: #ffffff;
+  --card-border: #e5e5e5;
+  --muted: #737373;
+  --accent: #c9a84c;
+  --accent-light: #dfc26e;
+  --accent-dark: #a88a30;
+  --gradient-start: #c9a84c;
+  --gradient-end: #e8d48b;
+  --hero-bg: #fafafa;
+  --nav-bg: rgba(255, 255, 255, 0.8);
+  --nav-border: rgba(0, 0, 0, 0.06);
+  --section-alt: #f9f9f9;
+  --glow: rgba(201, 168, 76, 0.06);
+}
+
+[data-theme="dark"] {
+  --background: #050505;
+  --foreground: #f5f5f5;
+  --surface: #111111;
+  --surface-hover: #1a1a1a;
+  --card: #0d0d0d;
+  --card-border: #1f1f1f;
+  --muted: #888888;
+  --accent: #c9a84c;
+  --accent-light: #dfc26e;
+  --accent-dark: #a88a30;
+  --gradient-start: #c9a84c;
+  --gradient-end: #e8d48b;
+  --hero-bg: #050505;
+  --nav-bg: rgba(5, 5, 5, 0.85);
+  --nav-border: rgba(255, 255, 255, 0.06);
+  --section-alt: #0a0a0a;
+  --glow: rgba(201, 168, 76, 0.05);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-accent-dark: var(--accent-dark);
+  --color-hero-bg: var(--hero-bg);
+  --color-nav-bg: var(--nav-bg);
+  --color-nav-border: var(--nav-border);
+  --color-section-alt: var(--section-alt);
+  --color-glow: var(--glow);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-playfair);
+}
+
+/* ===== Global Styles ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ===== Container utility ===== */
+.site-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(1.5rem, 5vw, 6rem);
+  padding-right: clamp(1.5rem, 5vw, 6rem);
+}
+
+.site-container-wide {
+  width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(1.5rem, 5vw, 6rem);
+  padding-right: clamp(1.5rem, 5vw, 6rem);
+}
+
+.site-container-narrow {
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(1.5rem, 5vw, 6rem);
+  padding-right: clamp(1.5rem, 5vw, 6rem);
+}
+
+/* ===== Selection ===== */
+::selection {
+  background-color: var(--accent);
+  color: #000;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* ===== Custom Animations ===== */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px var(--glow); }
+  50% { box-shadow: 0 0 16px var(--glow); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s ease-in-out infinite;
+  background-size: 200% 100%;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* ===== Glass Effect ===== */
+.glass {
+  background: var(--nav-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ===== Gradient Text – subtle gold accent ===== */
+.gradient-text {
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== Accent underline (replaces gradient-text for large headings) ===== */
+.accent-underline {
+  position: relative;
+  display: inline-block;
+}
+.accent-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  border-radius: 2px;
+}
