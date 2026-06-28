@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { collection, deleteDoc, doc, getDocs, limit, orderBy, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { formatDateTime, readDoc, writeAdminAuditLog, type AdminPostDoc, type AdminReportDoc } from "@/lib/admin";
 import { AlertTriangle, CheckCircle, EyeOff, Flag, Image as ImageIcon, ShieldCheck, Trash2, User } from "lucide-react";
@@ -38,13 +38,38 @@ export default function Moderation() {
         reportsByPost.set(report.postId, [...(reportsByPost.get(report.postId) ?? []), report]);
       });
 
-      const nextItems = postsSnap.docs.map(docSnap => {
+      // Posts that already carry a denormalised reportCount.
+      const postById = new Map<string, AdminPostDoc>();
+      postsSnap.docs.forEach(docSnap => {
         const post = readDoc<AdminPostDoc>(docSnap);
-        const postReports = reportsByPost.get(post.id) ?? [];
-        const reportCount = post.reportCount ?? postReports.length;
-        const severity: ModerationItem["severity"] = reportCount >= 5 ? "high" : reportCount >= 2 ? "medium" : "low";
-        return { ...post, reports: postReports, severity };
+        postById.set(post.id, post);
       });
+
+      // ALSO surface every post referenced by a report doc — even if reportCount was
+      // never incremented. The app writes to `reports` but not to the post, so without
+      // this the moderation queue stays empty despite real reports existing.
+      const missingPostIds = [...reportsByPost.keys()].filter(id => !postById.has(id));
+      const fetchedPosts = await Promise.all(
+        missingPostIds.map(async id => {
+          try {
+            const snap = await getDoc(doc(db, "socialPosts", id));
+            return snap.exists() ? readDoc<AdminPostDoc>(snap) : null;
+          } catch {
+            return null;
+          }
+        })
+      );
+      fetchedPosts.forEach(post => { if (post) postById.set(post.id, post); });
+
+      const nextItems = [...postById.values()]
+        .map(post => {
+          const postReports = reportsByPost.get(post.id) ?? [];
+          const reportCount = Math.max(post.reportCount ?? 0, postReports.length);
+          const severity: ModerationItem["severity"] = reportCount >= 5 ? "high" : reportCount >= 2 ? "medium" : "low";
+          return { ...post, reportCount, reports: postReports, severity };
+        })
+        // Most-reported first.
+        .sort((a, b) => (b.reportCount ?? 0) - (a.reportCount ?? 0));
 
       setItems(nextItems);
     } catch (error) {
@@ -94,6 +119,9 @@ export default function Moderation() {
     setMessage(null);
     try {
       await operation();
+      // Clear the underlying report docs so a resolved post doesn't resurface in the queue.
+      const reportDocs = await getDocs(query(collection(db, "reports"), where("postId", "==", post.id)));
+      await Promise.all(reportDocs.docs.map(reportDoc => deleteDoc(reportDoc.ref)));
       await writeAdminAuditLog(auth.currentUser, `moderation.post.${action}`, "post", post.id, {
         userId: post.userId ?? null,
         reportCount: post.reportCount ?? post.reports.length,

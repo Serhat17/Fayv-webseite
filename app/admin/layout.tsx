@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { hasAdminClaim, isEmailAllowlisted } from "@/lib/admin";
 import { trackEvent } from "@/lib/analytics";
@@ -21,6 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
+  const [reportCount, setReportCount] = useState(0);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -52,6 +53,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       source: "admin",
     }).catch(error => console.error("Admin page tracking failed", error));
   }, [accessState, adminUser, pathname]);
+
+  // Live count of open reports → drives the "new report" badge on the Moderation nav.
+  // Real-time: a new report from the app makes the badge appear without a reload.
+  useEffect(() => {
+    if (accessState !== "allowed") return;
+    const unsub = onSnapshot(
+      collection(db, "reports"),
+      (snap) => setReportCount(snap.size),
+      (error) => console.error("Reports-Listener fehlgeschlagen", error),
+    );
+    return unsub;
+  }, [accessState]);
 
   async function verifyAdminAccess(user: User) {
     try {
@@ -295,6 +308,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               >
                 <Icon size={20} className={isActive ? "opacity-100" : "opacity-70"} />
                 <span className="font-semibold text-sm">{item.name}</span>
+                {item.href === "/admin/moderation" && reportCount > 0 && (
+                  <span className="ml-auto min-w-[20px] rounded-full bg-red-500 px-1.5 py-0.5 text-center text-xs font-bold text-white">
+                    {reportCount > 99 ? "99+" : reportCount}
+                  </span>
+                )}
               </Link>
             );
           })}
